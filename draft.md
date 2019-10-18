@@ -3,6 +3,10 @@ Draft
 Rauf
 10/15/2019
 
+``` r
+knitr::opts_chunk$set(echo = TRUE)
+```
+
 ## R Markdown
 
 This is an R Markdown document. Markdown is a simple formatting syntax
@@ -28,6 +32,10 @@ summary(cars)
 ## Including Plots
 
 You can also embed plots, for example:
+
+``` r
+plot(pressure)
+```
 
 ![](draft_files/figure-gfm/pressure-1.png)<!-- -->
 
