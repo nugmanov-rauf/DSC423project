@@ -1,0 +1,21 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*. 
+
+```{r}
+bp = read.csv("NHANES_DB.csv")
+bp = bp[,-1]
+bp_d = bp[,-24]
+bp_s = bp[,-25]
+```
+
+```{r}
+
+}
+```
+
