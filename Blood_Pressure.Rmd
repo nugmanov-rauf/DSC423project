@@ -3,19 +3,63 @@ title: "R Notebook"
 output: html_notebook
 ---
 
-This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
-
-Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*. 
-
 ```{r}
 bp = read.csv("NHANES_DB.csv")
-bp = bp[,-1]
-bp_d = bp[,-24]
-bp_s = bp[,-25]
+bp = subset(bp, select=-c(SEQN, Insulin, LDL, Glucose))
+bp = bp[complete.cases(bp),]
+bp_d = subset(bp, select= -c(BPAvgSystolic))
+bp_s = subset(bp, select= -c(BPAvgDiastolic))
+```
+
+```{r}
+hist(bp[,c("BPAvgSystolic")], breaks =40)
+hist(bp[,c("BPAvgDiastolic")], breaks=40)
+```
+
+
+```{r}
+numerical = subset(bp, select = c(Age, Calcium, Magnesium, Sodium, Potassium, Alcohol, Weight, BMI, Waist, TotalCalcium, Cholesterol, Triglycerides, DirectHDL, WeeklyMealsNotHomePrepared))
+i = 1
+while (i <= length(names(numerical))) {
+  plot(bp$BPAvgSystolic, numerical[,i], xlab = "BP Avg Systolic", ylab = names(numerical)[i])
+  i = i + 1
+}
 ```
 
 ```{r}
 
+i=1
+while (i <= length(names(numerical))) {
+  plot(bp$BPAvgDiastolic, numerical[,i], xlab = "BP Avg Diastolic", ylab = names(numerical)[i])
+  i = i + 1
 }
+
+```
+
+```{r}
+cor(bp, method = "pearson")[,"BPAvgSystolic"]
+```
+
+```{r}
+cor(bp_d, method = "pearson")[,"BPAvgDiastolic"]
+```
+
+```{r}
+m_s1 = lm(BPAvgSystolic ~ . - NearlyEveryDayTroubleSleeping - DoctorNotSaidOverweight - NoSpecialDiet - NotDiagnosedPreDiabetes - NotDiagnosedDiabetes - NotToldHadStroke - NotTakingInsulin - NotToldCoronaryHeartDisease - SaltedVeryOftenUsed - Weight, data=bp_s)
+library(car)
+vif(m_s1)[order(vif(m_s1))]
+```
+
+```{r}
+summary(m_s1)
+```
+
+
+
+```{r}
+m_s2 = lm(BPAvgSystolic~(Age+Calcium+Magnesium+Sodium+Potassium+Alcohol+Weight+BMI+Waist+TotalCalcium+Cholesterol+Triglycerides+DirectHDL+WeeklyMealsNotHomePrepared+InfantsHousehold+ChildrenHousehold+SeniorsHousehold+DailyAlcoholicDrinks)*(MexicanAmerican+OtherHispanic+NonHispanicWhite+NonHispanicBlack+Pregnant+NotPregnant+SaltNeverUsed+SaltRarelyUsed+SaltOccasionallyUsed+SaltedVeryOftenUsed+OnSpecialDiet+NoSpecialDiet+DiagnosedDiabetes+NotDiagnosedDiabetes+BorderlineDiabetic+DiagnosedPreDiabetes+NotDiagnosedPreDiabetes+TakingInsulin+NotTakingInsulin+NoTroubleSleeping+SeveralDaysTroubleSleeping+MoreThanHalfDaysTroubleSleeping+NearlyEveryDayTroubleSleeping+MonthlyFamilyIncome_0_399+MonthlyFamilyIncome_400_799+MonthlyFamilyIncome_800_1249+MonthlyFamilyIncome_1250_1649+MonthlyFamilyIncome_1650_2099+MonthlyFamilyIncome_2100_2899+MonthlyFamilyIncome_2900_3749+MonthlyFamilyIncome_3750_4599+MonthlyFamilyIncome_4600_5399+MonthlyFamilyIncome_5400_6249+MonthlyFamilyIncome_6250_8399+MonthlyFamilyIncome_8400+DoctorSaidOverweight+DoctorNotSaidOverweight+ToldCongestiveHeartFailure+NotToldCongestiveHeartFailure+ToldCoronaryHeartDisease+NotToldCoronaryHeartDisease+ToldHadStroke+NotToldHadStroke)-NearlyEveryDayTroubleSleeping-DoctorNotSaidOverweight-Age:NoSpecialDiet-Age:NotDiagnosedPreDiabetes-Age:NotTakingInsulin-Age:NearlyEveryDayTroubleSleeping-Age:DoctorNotSaidOverweight-Calcium:NoSpecialDiet-Calcium:BorderlineDiabetic-Calcium:NotDiagnosedPreDiabetes-Calcium:NotTakingInsulin-Calcium:NearlyEveryDayTroubleSleeping-Calcium:DoctorNotSaidOverweight-Calcium:NotToldHadStroke-Magnesium:NoSpecialDiet-Magnesium:BorderlineDiabetic-Magnesium:NotDiagnosedPreDiabetes-Magnesium:NotTakingInsulin-Magnesium:NearlyEveryDayTroubleSleeping-Magnesium:DoctorNotSaidOverweight-Magnesium:NotToldHadStroke-Sodium:NoSpecialDiet-Sodium:BorderlineDiabetic-Sodium:NotDiagnosedPreDiabetes-Sodium:NotTakingInsulin-Sodium:NearlyEveryDayTroubleSleeping-Sodium:DoctorNotSaidOverweight-Sodium:NotToldHadStroke-Potassium:NoSpecialDiet-Potassium:BorderlineDiabetic-Potassium:NotDiagnosedPreDiabetes-Potassium:NotTakingInsulin-Potassium:NearlyEveryDayTroubleSleeping-Potassium:DoctorNotSaidOverweight-Potassium:NotToldCoronaryHeartDisease-Potassium:NotToldHadStroke-Alcohol:NoSpecialDiet-Alcohol:BorderlineDiabetic-Alcohol:NotDiagnosedPreDiabetes-Alcohol:NotTakingInsulin-Alcohol:NearlyEveryDayTroubleSleeping-Alcohol:DoctorNotSaidOverweight-Alcohol:NotToldCoronaryHeartDisease-Alcohol:NotToldHadStroke-Weight:NoSpecialDiet-Weight:BorderlineDiabetic-Weight:NotDiagnosedPreDiabetes-Weight:NotTakingInsulin-Weight:NearlyEveryDayTroubleSleeping-Weight:DoctorNotSaidOverweight-Weight:NotToldCoronaryHeartDisease-Weight:NotToldHadStroke-BMI:NoSpecialDiet-BMI:BorderlineDiabetic-BMI:NotDiagnosedPreDiabetes-BMI:NotTakingInsulin-BMI:NearlyEveryDayTroubleSleeping-BMI:DoctorNotSaidOverweight-BMI:NotToldCoronaryHeartDisease-BMI:NotToldHadStroke-Waist:NoSpecialDiet-Waist:BorderlineDiabetic-Waist:NotDiagnosedPreDiabetes-Waist:NotTakingInsulin-Waist:NearlyEveryDayTroubleSleeping-Waist:DoctorNotSaidOverweight-Waist:NotToldCoronaryHeartDisease-Waist:NotToldHadStroke-TotalCalcium:NoSpecialDiet-TotalCalcium:BorderlineDiabetic-TotalCalcium:NotDiagnosedPreDiabetes-TotalCalcium:NotTakingInsulin-TotalCalcium:NearlyEveryDayTroubleSleeping-TotalCalcium:DoctorNotSaidOverweight-TotalCalcium:NotToldCoronaryHeartDisease-TotalCalcium:NotToldHadStroke-Cholesterol:NoSpecialDiet-Cholesterol:BorderlineDiabetic-Cholesterol:NotDiagnosedPreDiabetes-Cholesterol:NotTakingInsulin-Cholesterol:NearlyEveryDayTroubleSleeping-Cholesterol:DoctorNotSaidOverweight-Cholesterol:NotToldCoronaryHeartDisease-Cholesterol:NotToldHadStroke-Triglycerides:NoSpecialDiet-Triglycerides:BorderlineDiabetic-Triglycerides:NotDiagnosedPreDiabetes-Triglycerides:NotTakingInsulin-Triglycerides:NearlyEveryDayTroubleSleeping-Triglycerides:DoctorNotSaidOverweight-Triglycerides:NotToldCoronaryHeartDisease-Triglycerides:NotToldHadStroke-DirectHDL:NoSpecialDiet-DirectHDL:BorderlineDiabetic-DirectHDL:NotDiagnosedPreDiabetes-DirectHDL:NotTakingInsulin-DirectHDL:NearlyEveryDayTroubleSleeping-DirectHDL:DoctorNotSaidOverweight-DirectHDL:NotToldCoronaryHeartDisease-DirectHDL:NotToldHadStroke-WeeklyMealsNotHomePrepared:NoSpecialDiet-WeeklyMealsNotHomePrepared:BorderlineDiabetic-WeeklyMealsNotHomePrepared:NotDiagnosedPreDiabetes-WeeklyMealsNotHomePrepared:NotTakingInsulin-WeeklyMealsNotHomePrepared:NearlyEveryDayTroubleSleeping-WeeklyMealsNotHomePrepared:DoctorNotSaidOverweight-WeeklyMealsNotHomePrepared:NotToldCoronaryHeartDisease-WeeklyMealsNotHomePrepared:NotToldHadStroke-InfantsHousehold:NoSpecialDiet-InfantsHousehold:BorderlineDiabetic-InfantsHousehold:NotDiagnosedPreDiabetes-InfantsHousehold:NotTakingInsulin-InfantsHousehold:NearlyEveryDayTroubleSleeping-InfantsHousehold:DoctorNotSaidOverweight-InfantsHousehold:NotToldCoronaryHeartDisease-InfantsHousehold:NotToldHadStroke-ChildrenHousehold:NoSpecialDiet-ChildrenHousehold:BorderlineDiabetic-ChildrenHousehold:NotDiagnosedPreDiabetes-ChildrenHousehold:NotTakingInsulin-ChildrenHousehold:NearlyEveryDayTroubleSleeping-ChildrenHousehold:DoctorNotSaidOverweight-ChildrenHousehold:NotToldCoronaryHeartDisease-ChildrenHousehold:NotToldHadStroke-SeniorsHousehold:Pregnant-SeniorsHousehold:NoSpecialDiet-SeniorsHousehold:BorderlineDiabetic-SeniorsHousehold:NotDiagnosedPreDiabetes-SeniorsHousehold:NotTakingInsulin-SeniorsHousehold:NearlyEveryDayTroubleSleeping-SeniorsHousehold:DoctorNotSaidOverweight-SeniorsHousehold:NotToldCoronaryHeartDisease-SeniorsHousehold:NotToldHadStroke-DailyAlcoholicDrinks:NoSpecialDiet-DailyAlcoholicDrinks:BorderlineDiabetic-DailyAlcoholicDrinks:NotDiagnosedPreDiabetes-DailyAlcoholicDrinks:NotTakingInsulin-DailyAlcoholicDrinks:NearlyEveryDayTroubleSleeping-DailyAlcoholicDrinks:DoctorNotSaidOverweight-DailyAlcoholicDrinks:NotToldCoronaryHeartDisease-DailyAlcoholicDrinks:NotToldHadStroke,data=bp_s)
+summary(m_s2)
+vif(m_s2)[order(vif(m_s2))]
+
 ```
 
