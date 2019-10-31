@@ -1,0 +1,83 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+bp = read.csv("NHANES_DB_New.csv")[,-1]
+bp_d = subset(bp, select= -c(BPAvgSys))
+bp_s = subset(bp, select= -c(BPAvgDias))
+```
+
+```{r}
+hist(bp[,c("BPAvgSys")], breaks =40)
+hist(bp[,c("BPAvgDias")], breaks=40)
+hist(bp[,c("BMI")])
+```
+
+
+```{r}
+numerical = subset(bp, select = c(Age, Calcium, Magnesium, Sodium, Potassium, Alcohol, Weight, BMI, Waist, LabCalcium, LabCholesterol, LabTriglycerides, LabHDL, DailyAlcoholDrinks, WeeklyMealsNotHomePrepared, DailyMinutesSedentary))
+i = 1
+while (i <= length(names(numerical))) {
+  plot(bp$BPAvgSys, numerical[,i], xlab = "BP Avg Systolic", ylab = names(numerical)[i])
+  i = i + 1
+}
+```
+
+```{r}
+
+i=1
+while (i <= length(names(numerical))) {
+  plot(bp$BPAvgDias, numerical[,i], xlab = "BP Avg Diastolic", ylab = names(numerical)[i])
+  i = i + 1
+}
+
+```
+
+```{r}
+cor(bp, method = "pearson")[,"BPAvgSys"]
+```
+
+```{r}
+cor(bp_d, method = "pearson")[,"BPAvgDias"]
+```
+
+```{r}
+full_sys = lm(BPAvgSys ~ . - NoSeniorsHousehold - NoInfantHousehold - NoChildrenHousehold - Weight, data=bp_s)
+library(car)
+vif(full_sys)[order(vif(full_sys))]
+```
+
+```{r}
+step(full_sys, direction = "backward", trace=FALSE)
+```
+
+```{r}
+m_s1 = lm(formula = BPAvgSys ~ Male + Age + NonHispanicWhite + NonHispanicBlack + 
+    X1SeniorHousehold + X2SeniorHousehold + Income_5k_10k + Income_10k_15k + 
+    Income_20k_25k + Income_45k_55k + Income_55k_65k + SaltRarelyUsed + 
+    SaltOccasionallyUsed + SaltVeryOftenUsed + OnSpecialDiet + 
+    Magnesium + Alcohol + BMI + LabCholesterol + LabTriglycerides + 
+    LabHDL + Diabetic + CongestiveHeartFailure + CoronaryHeartDisease, 
+    data = bp_s)
+summary(m_s1)
+```
+
+```{r}
+Base = lm(BPAvgSys ~ 1, data=bp_s)
+step(Base, scope=formula(full_sys),direction = "forward", trace=FALSE)
+```
+
+```{r}
+m_s2 = lm(formula = BPAvgSys ~ Age + Male + BMI + NonHispanicBlack + 
+    LabTriglycerides + LabHDL + CongestiveHeartFailure + LabCholesterol + 
+    Alcohol + Magnesium + X1SeniorHousehold + X2SeniorHousehold + 
+    Income_35k_45k + Income_10k_15k + Income_45k_55k + Income_5k_10k + 
+    Income_55k_65k + SaltVeryOftenUsed + Diabetic + CoronaryHeartDisease + 
+    SaltRarelyUsed + SaltOccasionallyUsed + NonHispanicWhite + 
+    OnSpecialDiet + Income_20k_25k, data = bp_s)
+summary(m_s2)
+```
+
+
