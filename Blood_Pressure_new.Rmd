@@ -4,7 +4,33 @@ output: html_notebook
 ---
 
 ```{r}
-bp = read.csv("NHANES_DB_New.csv")[,-1]
+bp = read.csv("NHANES Filtered Workbook.csv")
+bp$BPAvgSys = rowMeans(bp[c("BPXSY1", "BPXSY2", "BPXSY3")], na.rm=TRUE)
+bp$BPAvgDias = rowMeans(bp[c("BPXDI1", "BPXDI2", "BPXDI3")], na.rm=TRUE)
+library(dplyr)
+bp = select(bp,-c(SEQN, BPXSY1, BPXSY2, BPXSY3,BPXDI1,BPXDI2, BPXDI3, LBXIN, LBDINSI, LBDLDL, DIQ050, URXPREG,IND235))
+```
+
+```{r}
+bp = na.omit(bp)
+bp$DBD895 = replace(bp$DBD895, bp$DBD895==5555, 22)
+```
+
+```{r}
+bp = bp %>% filter(RIDEXPRG != 3, INDHHIN2 %in% c(1:10,14,15), DRQSPREP != 9, DRQSDIET != 9, !ALQ130 %in% c(777,999), !DIQ010 %in% c(7,9), !DIQ160 %in% c(7,9), !DBD895 %in% c(7777,9999), !DPQ030 %in% c(7,9), !MCQ080 %in% c(7,9), !MCQ160B %in% c(7,9), !MCQ160C %in% c(7,9), !MCQ160F %in% c(7,9), !PAD680 %in% c(7777,9999), !SMQ020 %in% c(7,9))
+```
+
+```{r}
+colnames(bp)[1:34] = c("Sex","Age","Race","Pregnant", "InfantsInHousehold", "ChildrenInHousehold", "SeniorsInHousehold", "Income", "SaltUsed", "SpecialDiet", "Calcium","Magnesium","Sodium","Potassium","Alcohol", "Weight","BMI", "Waist", "LabCalcium", "LabCholesterol", "LabTriglycerides", "LabHDL", "LabGlucose", "DailyAlcoholicDrinks", "Diabetic","Prediabetic", "WeeklyMealsNotHomePrepared", "HighBP", "Overweight", "CongestiveHeartFailure", "CoronaryHeartDisease", "Stroke", "SedentaryMins", "SmokedCigarettes")
+
+```
+
+```{r}
+bp = select(bp,-c(Diabetic))
+```
+Drop Diabetic variable because only 1 value after filters.
+
+```{r}
 bp_d = subset(bp, select= -c(BPAvgSys))
 bp_s = subset(bp, select= -c(BPAvgDias))
 ```
@@ -12,12 +38,11 @@ bp_s = subset(bp, select= -c(BPAvgDias))
 ```{r}
 hist(bp[,c("BPAvgSys")], breaks =40)
 hist(bp[,c("BPAvgDias")], breaks=40)
-hist(bp[,c("BMI")])
 ```
 
 
 ```{r}
-numerical = subset(bp, select = c(Age, Calcium, Magnesium, Sodium, Potassium, Alcohol, Weight, BMI, Waist, LabCalcium, LabCholesterol, LabTriglycerides, LabHDL, DailyAlcoholDrinks, WeeklyMealsNotHomePrepared, DailyMinutesSedentary))
+numerical = subset(bp, select = c(Age, Calcium, Magnesium, Sodium, Potassium, Alcohol, Weight, BMI, Waist, LabCalcium, LabCholesterol, LabTriglycerides, LabHDL, LabGlucose, DailyAlcoholicDrinks, WeeklyMealsNotHomePrepared, SedentaryMins))
 i = 1
 while (i <= length(names(numerical))) {
   plot(bp$BPAvgSys, numerical[,i], xlab = "BP Avg Systolic", ylab = names(numerical)[i])
@@ -44,9 +69,15 @@ cor(bp_d, method = "pearson")[,"BPAvgDias"]
 ```
 
 ```{r}
-full_sys = lm(BPAvgSys ~ . - NoSeniorsHousehold - NoInfantHousehold - NoChildrenHousehold - Weight, data=bp_s)
+full_sys = lm(BPAvgSys ~ as.factor(Sex)+Age+as.factor(Race)+as.factor(Pregnant)+as.factor(InfantsInHousehold)+as.factor(ChildrenInHousehold)+as.factor(SeniorsInHousehold)+as.factor(Income)+as.factor(SaltUsed)+as.factor(SpecialDiet)+Calcium+Magnesium+Sodium+ Potassium + Alcohol + BMI + Waist + LabCalcium + LabCholesterol + LabTriglycerides + LabHDL + LabGlucose + DailyAlcoholicDrinks + as.factor(Prediabetic) + WeeklyMealsNotHomePrepared + as.factor(HighBP) + as.factor(Overweight) + as.factor(CongestiveHeartFailure)+as.factor(CoronaryHeartDisease)+as.factor(Stroke)+SedentaryMins + as.factor(SmokedCigarettes), data=bp_s)
+full_sys
+```
+
+```{r}
 library(car)
-vif(full_sys)[order(vif(full_sys))]
+```
+```{r}
+vif(full_sys)
 ```
 
 ```{r}
@@ -54,13 +85,11 @@ step(full_sys, direction = "backward", trace=FALSE)
 ```
 
 ```{r}
-m_s1 = lm(formula = BPAvgSys ~ Male + Age + NonHispanicWhite + NonHispanicBlack + 
-    X1SeniorHousehold + X2SeniorHousehold + Income_5k_10k + Income_10k_15k + 
-    Income_20k_25k + Income_45k_55k + Income_55k_65k + SaltRarelyUsed + 
-    SaltOccasionallyUsed + SaltVeryOftenUsed + OnSpecialDiet + 
-    Magnesium + Alcohol + BMI + LabCholesterol + LabTriglycerides + 
-    LabHDL + Diabetic + CongestiveHeartFailure + CoronaryHeartDisease, 
-    data = bp_s)
+m_s1 = lm(formula = BPAvgSys ~ as.factor(Sex) + Age + as.factor(Race) + 
+    as.factor(SeniorsInHousehold) + as.factor(Income) + as.factor(SaltUsed) + 
+    as.factor(SpecialDiet) + Magnesium + Alcohol + BMI + LabCholesterol + 
+    LabTriglycerides + LabHDL + as.factor(CongestiveHeartFailure) + 
+    as.factor(CoronaryHeartDisease), data = bp_s)
 summary(m_s1)
 ```
 
@@ -69,15 +98,5 @@ Base = lm(BPAvgSys ~ 1, data=bp_s)
 step(Base, scope=formula(full_sys),direction = "forward", trace=FALSE)
 ```
 
-```{r}
-m_s2 = lm(formula = BPAvgSys ~ Age + Male + BMI + NonHispanicBlack + 
-    LabTriglycerides + LabHDL + CongestiveHeartFailure + LabCholesterol + 
-    Alcohol + Magnesium + X1SeniorHousehold + X2SeniorHousehold + 
-    Income_35k_45k + Income_10k_15k + Income_45k_55k + Income_5k_10k + 
-    Income_55k_65k + SaltVeryOftenUsed + Diabetic + CoronaryHeartDisease + 
-    SaltRarelyUsed + SaltOccasionallyUsed + NonHispanicWhite + 
-    OnSpecialDiet + Income_20k_25k, data = bp_s)
-summary(m_s2)
-```
 
 
