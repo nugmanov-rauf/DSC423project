@@ -1,6 +1,8 @@
 ---
 title: "R Notebook"
-output: html_notebook
+output:
+  word_document: default
+  html_notebook: default
 ---
 
 ```{r}
@@ -36,8 +38,8 @@ bp_s = subset(bp, select= -c(BPAvgDias))
 ```
 
 ```{r}
-hist(bp[,c("BPAvgSys")], breaks =40)
-hist(bp[,c("BPAvgDias")], breaks=40)
+hist(bp$BPAvgSys, breaks =40)
+hist(bp$BPAvgDias, breaks=40)
 ```
 
 
@@ -58,6 +60,23 @@ while (i <= length(names(numerical))) {
   i = i + 1
 }
 
+```
+
+```{r}
+characs = subset(bp, select = -c(Age, Calcium, Magnesium, Sodium, Potassium, Alcohol, Weight, BMI, Waist, LabCalcium, LabCholesterol, LabTriglycerides, LabHDL, LabGlucose, DailyAlcoholicDrinks, WeeklyMealsNotHomePrepared, SedentaryMins, BPAvgSys, BPAvgDias))
+i = 1
+while (i <= length(names(characs))) {
+  boxplot(bp$BPAvgSys ~ characs[,i], xlab = "BP Avg Systolic", ylab = names(characs)[i])
+  i = i + 1
+}
+```
+
+```{r}
+i = 1
+while (i <= length(names(characs))) {
+  boxplot(bp$BPAvgDias ~ characs[,i], xlab = "BP Avg Diastolic", ylab = names(characs)[i])
+  i = i + 1
+}
 ```
 
 ```{r}
