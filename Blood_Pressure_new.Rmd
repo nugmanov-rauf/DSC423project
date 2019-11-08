@@ -43,11 +43,20 @@ hist(bp$BPAvgDias, breaks=40)
 ```
 
 
+
 ```{r}
 numerical = subset(bp, select = c(Age, Calcium, Magnesium, Sodium, Potassium, Alcohol, Weight, BMI, Waist, LabCalcium, LabCholesterol, LabTriglycerides, LabHDL, LabGlucose, DailyAlcoholicDrinks, WeeklyMealsNotHomePrepared, SedentaryMins))
 i = 1
 while (i <= length(names(numerical))) {
   plot(bp$BPAvgSys, numerical[,i], xlab = "BP Avg Systolic", ylab = names(numerical)[i])
+  i = i + 1
+}
+```
+
+```{r}
+i = 1
+while (i <= length(names(numerical))) {
+  hist(numerical[,i], main = names(numerical)[i], breaks=30)
   i = i + 1
 }
 ```
@@ -63,10 +72,10 @@ while (i <= length(names(numerical))) {
 ```
 
 ```{r}
-characs = subset(bp, select = -c(Age, Calcium, Magnesium, Sodium, Potassium, Alcohol, Weight, BMI, Waist, LabCalcium, LabCholesterol, LabTriglycerides, LabHDL, LabGlucose, DailyAlcoholicDrinks, WeeklyMealsNotHomePrepared, SedentaryMins, BPAvgSys, BPAvgDias))
+cats = subset(bp, select = -c(Age, Calcium, Magnesium, Sodium, Potassium, Alcohol, Weight, BMI, Waist, LabCalcium, LabCholesterol, LabTriglycerides, LabHDL, LabGlucose, DailyAlcoholicDrinks, WeeklyMealsNotHomePrepared, SedentaryMins, BPAvgSys, BPAvgDias))
 i = 1
-while (i <= length(names(characs))) {
-  boxplot(bp$BPAvgSys ~ characs[,i], xlab = "BP Avg Systolic", ylab = names(characs)[i])
+while (i <= length(names(cats))) {
+  boxplot(bp$BPAvgSys ~ cats[,i], xlab = "BP Avg Systolic", ylab = names(cats)[i])
   i = i + 1
 }
 ```
