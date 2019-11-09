@@ -1,0 +1,348 @@
+---
+title: "Blood Pressure Diastolic"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+### Load data, calculate mean diastolic and systolic blood pressures, and removing individual blood pressure readings and other non-essential variables
+
+```{r load-data, eval=TRUE}
+bp = read.csv("NHANES Filtered Workbook.csv")
+bp$BPAvgSys = rowMeans(bp[c("BPXSY1", "BPXSY2", "BPXSY3")], na.rm=TRUE)
+bp$BPAvgDias = rowMeans(bp[c("BPXDI1", "BPXDI2", "BPXDI3")], na.rm=TRUE)
+library(dplyr)
+bp = select(bp,-c(SEQN, BPXSY1, BPXSY2, BPXSY3,BPXDI1,BPXDI2, BPXDI3, LBXIN, LBDINSI, LBDLDL, DIQ050, URXPREG,IND235))
+```
+
+### Ommiting any nulls in the dataset and replacing values in DBD895 (# of meals not prepared at home) with 22 where it shows value "5,555". This is an obvious error in the data, so we replaced with average for the column.
+```{r}
+bp = na.omit(bp)
+bp$DBD895 = replace(bp$DBD895, bp$DBD895==5555, 22)
+```
+
+
+
+### Filtering down the dataset to remove dysfunctional data
+```{r}
+bp = bp %>% filter(RIDEXPRG != 3, INDHHIN2 %in% c(1:10,14,15), DRQSPREP != 9, DRQSDIET != 9, !ALQ130 %in% c(777,999), !DIQ010 %in% c(7,9), !DIQ160 %in% c(7,9), !DBD895 %in% c(7777,9999), !DPQ030 %in% c(7,9), !MCQ080 %in% c(7,9), !MCQ160B %in% c(7,9), !MCQ160C %in% c(7,9), !MCQ160F %in% c(7,9), !PAD680 %in% c(7777,9999), !SMQ020 %in% c(7,9))
+```
+
+
+### Renaming columns
+```{r}
+colnames(bp)[1:34] = c("Sex","Age","Race","Pregnant", "InfantsInHousehold", "ChildrenInHousehold", "SeniorsInHousehold", "Income", "SaltUsed", "SpecialDiet", "Calcium","Magnesium","Sodium","Potassium","Alcohol", "Weight","BMI", "Waist", "LabCalcium", "LabCholesterol", "LabTriglycerides", "LabHDL", "LabGlucose", "DailyAlcoholicDrinks", "Diabetic","Prediabetic", "WeeklyMealsNotHomePrepared", "HighBP", "Overweight", "CongestiveHeartFailure", "CoronaryHeartDisease", "Stroke", "SedentaryMins", "SmokedCigarettes")
+```
+
+### Drop diabetic variable because only 1 value after filtering
+```{r}
+bp = select(bp,-c(Diabetic))
+```
+bp
+
+### Breaking data down into two sets: one for diastolic and one systolic
+```{r}
+bp_d = subset(bp, select= -c(BPAvgSys))
+bp_s = subset(bp, select= -c(BPAvgDias))
+```
+
+### Creating histograms for average diastolic and average systolic blood pressure
+```{r}
+hist(bp$BPAvgSys, breaks =40)
+hist(bp$BPAvgDias, breaks=40)
+```
+
+### Loop to create scatterplots of average systolic blood pressure against all other numerical variables
+```{r}
+numerical = subset(bp, select = c(Age, Calcium, Magnesium, Sodium, Potassium, Alcohol, Weight, BMI, Waist, LabCalcium, LabCholesterol, LabTriglycerides, LabHDL, LabGlucose, DailyAlcoholicDrinks, WeeklyMealsNotHomePrepared, SedentaryMins))
+i = 1
+while (i <= length(names(numerical))) {
+  plot(bp$BPAvgSys, numerical[,i], xlab = "BP Avg Systolic", ylab = names(numerical)[i])
+  i = i + 1
+}
+```
+
+### Loop to create scatterplots of average diastolic blood pressure against all other numerical variables
+```{r}
+i=1
+while (i <= length(names(numerical))) {
+  plot(bp$BPAvgDias, numerical[,i], xlab = "BP Avg Diastolic", ylab = names(numerical)[i])
+  i = i + 1
+}
+```
+
+### Loop to create boxlots of average systolic blood pressure against all categorical variables.
+```{r}
+characs = subset(bp, select = -c(Age, Calcium, Magnesium, Sodium, Potassium, Alcohol, Weight, BMI, Waist, LabCalcium, LabCholesterol, LabTriglycerides, LabHDL, LabGlucose, DailyAlcoholicDrinks, WeeklyMealsNotHomePrepared, SedentaryMins, BPAvgSys, BPAvgDias))
+i = 1
+while (i <= length(names(characs))) {
+  boxplot(bp$BPAvgSys ~ characs[,i], xlab = "BP Avg Systolic", ylab = names(characs)[i])
+  i = i + 1
+}
+```
+
+### Loop to create boxlots of average diastolic blood pressure against all categorical variables
+```{r}
+i = 1
+while (i <= length(names(characs))) {
+  boxplot(bp$BPAvgDias ~ characs[,i], xlab = "BP Avg Diastolic", ylab = names(characs)[i])
+  i = i + 1
+}
+```
+
+### Correlation coefficients for average systolic blood pressure
+```{r}
+cor(bp, method = "pearson")[,"BPAvgSys"]
+```
+
+### Correlation coefficients for average diastolic blood pressure
+```{r}
+cor(bp_d, method = "pearson")[,"BPAvgDias"]
+```
+
+### First full linear model for average diastolic blood pressure
+```{r}
+full_sys = lm(BPAvgDias ~ as.factor(Sex)+Age+as.factor(Race)+as.factor(Pregnant)+as.factor(InfantsInHousehold)+as.factor(ChildrenInHousehold)+as.factor(SeniorsInHousehold)+as.factor(Income)+as.factor(SaltUsed)+as.factor(SpecialDiet)+Calcium+Magnesium+Sodium+ Potassium + Alcohol + BMI + Waist + LabCalcium + LabCholesterol + LabTriglycerides + LabHDL + LabGlucose + DailyAlcoholicDrinks + as.factor(Prediabetic) + WeeklyMealsNotHomePrepared + as.factor(HighBP) + as.factor(Overweight) + as.factor(CongestiveHeartFailure)+as.factor(CoronaryHeartDisease)+as.factor(Stroke)+SedentaryMins + as.factor(SmokedCigarettes), data=bp_d)
+summary(full_sys)
+```
+
+### Computation of influential points and studentized vs hat value plot for diastolic model. 27 outliers were removed.
+```{r influencial, eval=TRUE}
+# compute influential points statistics
+influence.measures(full_sys)
+# print out only observations that may be influential 
+summary(influence.measures(full_sys))
+plot(rstudent(full_sys)~hatvalues(full_sys))
+abline(h =-3, col="red")  # add cutoff line
+abline(h = 3, col="red")  # add cutoff line
+LargeResiduals <- abs(rstudent(full_sys)) > 3
+bp_d_less_out <- bp_d[!LargeResiduals, ]
+nrow(bp_d)-nrow(bp_d_less_out)
+```
+
+### VIF computed to determine if there is any multi-collinearity in diastolic model. No variables exceeded the multi-collinearity threshold of 10.
+```{r}
+library(car)
+```
+```{r}
+vif(full_sys)
+```
+
+### Backwards stepwise regression used to determine optimal linear fit for diastolic model
+```{r}
+step(full_sys, direction = "backward", trace=FALSE)
+```
+
+### Linear model based on above stepwise fit for diastolic model
+```{r}
+m_d1 = lm(formula = BPAvgDias ~ as.factor(Sex) + Age + as.factor(Race) + 
+    as.factor(Pregnant) + as.factor(ChildrenInHousehold) + as.factor(SeniorsInHousehold) + 
+    Sodium + Potassium + Alcohol + BMI + LabCholesterol + LabTriglycerides + 
+    LabGlucose + as.factor(CoronaryHeartDisease) + SedentaryMins + 
+    as.factor(SmokedCigarettes), data = bp_d)
+summary(m_d1)
+```
+
+### Reran stepwise function
+```{r}
+Base = lm(BPAvgDias ~ 1, data=bp_d)
+step(Base, scope=formula(full_sys),direction = "forward", trace=FALSE)
+```
+
+
+### Linear model based on above forward stepwise fit for diastolic model
+```{r}
+m_d2 = lm(formula = BPAvgDias ~ LabCholesterol + Waist + Age +as.factor(SeniorsInHousehold) + LabTriglycerides + as.factor(Race) + as.factor(Pregnant) + LabGlucose + as.factor(CoronaryHeartDisease) + as.factor(SmokedCigarettes) + 
+    Alcohol + as.factor(ChildrenInHousehold) + SedentaryMins + 
+    BMI + as.factor(Sex), data = bp_d)
+summary(m_d2)
+```
+#### _Backward stepwise returned a higher adjusted R-squared of 0.1406 vs the 0.1392 in the forward stepwise_
+
+### New diastolic model with influential points removed
+```{r influencial removed model, eval=TRUE}
+full_sys_new = lm(BPAvgDias ~ as.factor(Sex)+Age+as.factor(Race)+as.factor(Pregnant)+as.factor(InfantsInHousehold)+as.factor(ChildrenInHousehold)+as.factor(SeniorsInHousehold)+as.factor(Income)+as.factor(SaltUsed)+as.factor(SpecialDiet)+Calcium+Magnesium+Sodium+ Potassium + Alcohol + BMI + Waist + LabCalcium + LabCholesterol + LabTriglycerides + LabHDL + LabGlucose + DailyAlcoholicDrinks + as.factor(Prediabetic) + WeeklyMealsNotHomePrepared + as.factor(HighBP) + as.factor(Overweight) + as.factor(CongestiveHeartFailure)+as.factor(CoronaryHeartDisease)+as.factor(Stroke)+SedentaryMins + as.factor(SmokedCigarettes), data=bp_d_less_out)
+plot(rstudent(full_sys_new)~hatvalues(full_sys_new))
+abline(h =-3, col="red")  # add cutoff line
+abline(h = 3, col="red")  # add cutoff line
+```
+
+### Summary of new diastolic model
+```{r summary full_sys_new, eval=TRUE}
+summary(full_sys_new)
+```
+
+### Stepwise regression reran on new diastolic model
+```{r stepwise influencial removed , eval=TRUE}
+step(full_sys_new, direction = "backward", trace=FALSE)
+```
+
+### Stepwise model for new diastolic model
+```{r stepwise influencial removed model, eval=TRUE}
+m_d2_less_out = lm(formula = BPAvgDias ~ as.factor(Sex) + Age + as.factor(Race) + 
+    as.factor(Pregnant) + as.factor(ChildrenInHousehold) + as.factor(SeniorsInHousehold) + 
+    Magnesium + Alcohol + BMI + LabCholesterol + LabTriglycerides + 
+    LabGlucose + as.factor(CoronaryHeartDisease) + as.factor(SmokedCigarettes), 
+    data = bp_d_less_out)
+summary(m_d2_less_out)
+```
+
+### Residual and Q-Q Plots for new diastolic model
+```{r residual-assumptions, eval=TRUE}
+#residuals vs fitted values plot
+plot(fitted(full_sys), rstandard(full_sys))
+abline(a=0,b=0,col='red')
+#residuals vs independent variables
+plot(bp_d$Age,  rstandard(full_sys), main="Age vs residuals plot for M2")
+abline(a=0, b=0,col='red')
+plot(bp_d$Income,  rstandard(full_sys), main="Income vs residuals plot for M2")
+abline(a=0, b=0,col='red')
+plot(bp_d$BMI,  rstandard(full_sys), main="Wealth vs residuals plot for M2")
+abline(a=0, b=0,col='red')
+plot(bp_d$LabTriglycerides,  rstandard(full_sys), main="Triglycerides vs residuals plot for M2")
+abline(a=0, b=0,col='red')
+plot(bp_d$Alcohol,  rstandard(full_sys), main="Alcohol vs residuals plot for M2")
+abline(a=0, b=0,col='red')
+plot(bp_d$WeeklyMealsNotHomePrepared,  rstandard(full_sys), main="WeeklyMealsNotHomePrepared vs residuals plot for M2")
+abline(a=0, b=0,col='red')
+#normal probability plot of residuals
+qqnorm(rstandard(full_sys))
+qqline(rstandard(full_sys),col=2)
+```
+
+### Based on above residual plots, three variables did not appear to have randoly scattered patterns. We attempted to transform these variables.
+```{r squared model, eval=TRUE}
+Alcohol2 = bp_d$Alcohol^2
+LabTriglycerides2 = bp_d$LabTriglycerides^2
+WeeklyMealsNotHomePrepared2 = bp_d$WeeklyMealsNotHomePrepared^2
+# attach it to bp_d dataset
+bp_d=cbind(bp_d, Alcohol2,LabTriglycerides2, WeeklyMealsNotHomePrepared2)
+full_sys_transformed = lm(BPAvgDias ~ as.factor(Sex)+Age+as.factor(Race)+as.factor(Pregnant)+as.factor(InfantsInHousehold)+as.factor(ChildrenInHousehold)+as.factor(SeniorsInHousehold)+as.factor(Income)+as.factor(SaltUsed)+as.factor(SpecialDiet)+Calcium+Magnesium+Sodium+ Potassium + Alcohol + Alcohol2 + BMI + Waist + LabCalcium + LabCholesterol + LabTriglycerides+ LabTriglycerides2 + LabHDL + LabGlucose + DailyAlcoholicDrinks + as.factor(Prediabetic) + WeeklyMealsNotHomePrepared + WeeklyMealsNotHomePrepared2 + as.factor(HighBP) + as.factor(Overweight) + as.factor(CongestiveHeartFailure)+as.factor(CoronaryHeartDisease)+as.factor(Stroke)+SedentaryMins + as.factor(SmokedCigarettes), data=bp_d)
+summary(full_sys_transformed)
+```
+
+#### The adjusted R-squared improves from 0.1359 after transformation to 0.1378
+
+### Residual and Q-Q Plots recreated after transformations
+
+```{r residual-assumptions after transform, eval=TRUE}
+#residuals vs fitted values plot
+plot(fitted(full_sys_transformed), rstandard(full_sys_transformed))
+abline(a=0,b=0,col='red')
+plot(bp_d$LabTriglycerides2,  rstandard(full_sys_transformed), main="Triglycerides vs residuals plot for M2")
+abline(a=0, b=0,col='red')
+plot(bp_d$Alcohol2,  rstandard(full_sys_transformed), main="Alcohol vs residuals plot for M2")
+abline(a=0, b=0,col='red')
+plot(bp_d$WeeklyMealsNotHomePrepared2,  rstandard(full_sys_transformed), main="WeeklyMealsNotHomePrepared vs residuals plot for M2")
+abline(a=0, b=0,col='red')
+#normal probability plot of residuals
+qqnorm(rstandard(full_sys_transformed))
+qqline(rstandard(full_sys_transformed),col=2)
+```
+
+### Stepwise regression redone after transformation improved model created. This model still contains the outliers identified earlier in the analysis 
+```{r stepwise transformed , eval=TRUE}
+step(full_sys_transformed, direction = "backward", trace=FALSE)
+```
+
+### Stepwise regression model from above output
+```{r stepwise squared model, eval=TRUE}
+m_d3_trans = lm(formula = BPAvgDias ~ Age + as.factor(Race) + as.factor(Pregnant) + 
+    as.factor(ChildrenInHousehold) + as.factor(SeniorsInHousehold) + 
+    Sodium + Potassium + Alcohol + Alcohol2 + BMI + LabCholesterol + 
+    LabTriglycerides + LabTriglycerides2 + LabGlucose + WeeklyMealsNotHomePrepared2 + 
+    as.factor(Overweight) + as.factor(CoronaryHeartDisease) + 
+    SedentaryMins + as.factor(SmokedCigarettes), data = bp_d)
+summary(m_d3_trans)
+```
+
+### Full system model created again, but this time without the outliers identified earlier
+```{r transformed and less residual, eval=TRUE}
+Alcohol2 = bp_d_less_out$Alcohol^2
+LabTriglycerides2 = bp_d_less_out$LabTriglycerides^2
+WeeklyMealsNotHomePrepared2 = bp_d_less_out$WeeklyMealsNotHomePrepared^2
+# attach it to bp_d dataset
+bp_d_less_out=cbind(bp_d_less_out, Alcohol2,LabTriglycerides2, WeeklyMealsNotHomePrepared2)
+full_sys_tran_less_out = lm(BPAvgDias ~ as.factor(Sex)+Age+as.factor(Race)+as.factor(Pregnant)+as.factor(InfantsInHousehold)+as.factor(ChildrenInHousehold)+as.factor(SeniorsInHousehold)+as.factor(Income)+as.factor(SaltUsed)+as.factor(SpecialDiet)+Calcium+Magnesium+Sodium+ Potassium + Alcohol + Alcohol2 + BMI + Waist + LabCalcium + LabCholesterol + LabTriglycerides+ LabTriglycerides2 + LabHDL + LabGlucose + DailyAlcoholicDrinks + as.factor(Prediabetic) + WeeklyMealsNotHomePrepared + WeeklyMealsNotHomePrepared2 + as.factor(HighBP) + as.factor(Overweight) + as.factor(CongestiveHeartFailure)+as.factor(CoronaryHeartDisease)+as.factor(Stroke)+SedentaryMins + as.factor(SmokedCigarettes), data=bp_d_less_out)
+summary(full_sys_tran_less_out)
+```
+
+
+### Stepwise regression on full system transformation model without outliers
+```{r stepwise transformed and oulier removed, eval=TRUE}
+step(full_sys_tran_less_out, direction = "backward", trace=FALSE)
+```
+```{r stepwise transformed and oulier removed model, eval=TRUE}
+m_d4_trans_out_comb = lm(formula = BPAvgDias ~ as.factor(Sex) + Age + as.factor(Race) + 
+    as.factor(Pregnant) + as.factor(ChildrenInHousehold) + as.factor(SeniorsInHousehold) + 
+    Magnesium + Alcohol + Alcohol2 + BMI + LabCholesterol + LabTriglycerides + 
+    LabGlucose + as.factor(Prediabetic) + as.factor(CoronaryHeartDisease) + 
+    as.factor(SmokedCigarettes), data = bp_d_less_out)
+summary(m_d4_trans_out_comb)
+```
+
+
+### Removal of most insignificant variable. Actual dummy variables had to be created for this step. Model is better than previous based on adjusted R-Squared
+```{r stepwise transformed and oulier removed model with insignificant variables removed, eval=TRUE}
+
+race2 = (bp_d_less_out$Race=="2")*1
+race3 = (bp_d_less_out$Race=="3")*1
+race4 = (bp_d_less_out$Race=="4")*1
+race5 = (bp_d_less_out$Race=="5")*1
+
+m_d5_trans_out_comb = lm(formula = BPAvgDias ~ as.factor(Sex) + Age + race3 + race4 + race5 +
+    as.factor(Pregnant) + as.factor(ChildrenInHousehold) + as.factor(SeniorsInHousehold) + 
+    Magnesium + Alcohol + Alcohol2 + BMI + LabCholesterol + LabTriglycerides + 
+    LabGlucose + as.factor(Prediabetic) + as.factor(CoronaryHeartDisease) + 
+    as.factor(SmokedCigarettes), data = bp_d_less_out)
+summary(m_d5_trans_out_comb)
+```
+
+### Removal of next most insignificant variable. Dummy variables had to be created in this step as well. Model adjusted R-squared improved compared to previous. 
+```{r}
+chld1 = (bp_d_less_out$ChildrenInHousehold=="1")*1
+chld2 = (bp_d_less_out$ChildrenInHousehold=="2")*1
+chld3 = (bp_d_less_out$ChildrenInHousehold=="3")*1
+chld4 = (bp_d_less_out$ChildrenInHousehold=="4")*1
+
+m_d6_trans_out_comb = lm(formula = BPAvgDias ~ as.factor(Sex) + Age + race3 + race4 + race5 +
+    as.factor(Pregnant) + chld1 + chld2 + chld4 + as.factor(SeniorsInHousehold) + 
+    Magnesium + Alcohol + Alcohol2 + BMI + LabCholesterol + LabTriglycerides + 
+    LabGlucose + as.factor(Prediabetic) + as.factor(CoronaryHeartDisease) + 
+    as.factor(SmokedCigarettes), data = bp_d_less_out)
+summary(m_d6_trans_out_comb)
+```
+
+
+### Model that removes chld2 variable. Model adjusted R-squared stays the same as the last one, but multiple R-squared drops. Previous model is optimal.
+```{r}
+m_d7_trans_out_comb = lm(formula = BPAvgDias ~ as.factor(Sex) + Age + race3 + race4 + race5 +
+    as.factor(Pregnant) + chld1 + chld4 + as.factor(SeniorsInHousehold) + 
+    Magnesium + Alcohol + Alcohol2 + BMI + LabCholesterol + LabTriglycerides + 
+    LabGlucose + as.factor(Prediabetic) + as.factor(CoronaryHeartDisease) + 
+    as.factor(SmokedCigarettes), data = bp_d_less_out)
+summary(m_d7_trans_out_comb)
+```
+
+#### The adjusted R-squared is highest after transformation and influential large residual removal compared to transformation model with outliers included.
+
+### Residuals and Q-Q plots reran on the latest model
+
+```{r residual-assumptions after transform and large residual removal, eval=TRUE}
+#residuals vs fitted values plot
+plot(fitted(m_d6_trans_out_comb), rstandard(m_d6_trans_out_comb))
+abline(a=0,b=0,col='red')
+plot(bp_d_less_out$LabTriglycerides2,  rstandard(m_d6_trans_out_comb), main="Triglycerides vs residuals plot for M2")
+abline(a=0, b=0,col='red')
+plot(bp_d_less_out$BMI,  rstandard(m_d6_trans_out_comb), main="BMI vs residuals plot for M2")
+abline(a=0, b=0,col='red')
+plot(bp_d_less_out$Alcohol2,  rstandard(m_d6_trans_out_comb), main="Alcohol vs residuals plot for M2")
+abline(a=0, b=0,col='red')
+#normal probability plot of residuals
+qqnorm(rstandard(full_sys_transformed))
+qqline(rstandard(full_sys_transformed),col=2)
+```
