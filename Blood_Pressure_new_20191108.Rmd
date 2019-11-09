@@ -1,0 +1,275 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r load-data, eval=TRUE}
+bp = read.csv("NHANES Filtered Workbook.csv")
+bp$BPAvgSys = rowMeans(bp[c("BPXSY1", "BPXSY2", "BPXSY3")], na.rm=TRUE)
+bp$BPAvgDias = rowMeans(bp[c("BPXDI1", "BPXDI2", "BPXDI3")], na.rm=TRUE)
+library(dplyr)
+bp = select(bp,-c(SEQN, BPXSY1, BPXSY2, BPXSY3,BPXDI1,BPXDI2, BPXDI3, LBXIN, LBDINSI, LBDLDL, DIQ050, URXPREG,IND235))
+```
+
+```{r}
+bp = na.omit(bp)
+bp$DBD895 = replace(bp$DBD895, bp$DBD895==5555, 22)
+```
+
+```{r}
+bp = bp %>% filter(RIDEXPRG != 3, INDHHIN2 %in% c(1:10,14,15), DRQSPREP != 9, DRQSDIET != 9, !ALQ130 %in% c(777,999), !DIQ010 %in% c(7,9), !DIQ160 %in% c(7,9), !DBD895 %in% c(7777,9999), !DPQ030 %in% c(7,9), !MCQ080 %in% c(7,9), !MCQ160B %in% c(7,9), !MCQ160C %in% c(7,9), !MCQ160F %in% c(7,9), !PAD680 %in% c(7777,9999), !SMQ020 %in% c(7,9))
+```
+
+```{r}
+colnames(bp)[1:34] = c("Sex","Age","Race","Pregnant", "InfantsInHousehold", "ChildrenInHousehold", "SeniorsInHousehold", "Income", "SaltUsed", "SpecialDiet", "Calcium","Magnesium","Sodium","Potassium","Alcohol", "Weight","BMI", "Waist", "LabCalcium", "LabCholesterol", "LabTriglycerides", "LabHDL", "LabGlucose", "DailyAlcoholicDrinks", "Diabetic","Prediabetic", "WeeklyMealsNotHomePrepared", "HighBP", "Overweight", "CongestiveHeartFailure", "CoronaryHeartDisease", "Stroke", "SedentaryMins", "SmokedCigarettes")
+
+```
+
+```{r}
+bp = select(bp,-c(Diabetic))
+```
+Drop Diabetic variable because only 1 value after filters.
+
+```{r}
+bp_d = subset(bp, select= -c(BPAvgSys))
+bp_s = subset(bp, select= -c(BPAvgDias))
+```
+
+```{r}
+hist(bp$BPAvgSys, breaks =40)
+hist(bp$BPAvgDias, breaks=40)
+```
+
+
+```{r}
+numerical = subset(bp, select = c(Age, Calcium, Magnesium, Sodium, Potassium, Alcohol, Weight, BMI, Waist, LabCalcium, LabCholesterol, LabTriglycerides, LabHDL, LabGlucose, DailyAlcoholicDrinks, WeeklyMealsNotHomePrepared, SedentaryMins))
+i = 1
+while (i <= length(names(numerical))) {
+  plot(bp$BPAvgSys, numerical[,i], xlab = "BP Avg Systolic", ylab = names(numerical)[i])
+  i = i + 1
+}
+```
+
+```{r}
+
+i=1
+while (i <= length(names(numerical))) {
+  plot(bp$BPAvgDias, numerical[,i], xlab = "BP Avg Diastolic", ylab = names(numerical)[i])
+  i = i + 1
+}
+
+```
+
+```{r}
+characs = subset(bp, select = -c(Age, Calcium, Magnesium, Sodium, Potassium, Alcohol, Weight, BMI, Waist, LabCalcium, LabCholesterol, LabTriglycerides, LabHDL, LabGlucose, DailyAlcoholicDrinks, WeeklyMealsNotHomePrepared, SedentaryMins, BPAvgSys, BPAvgDias))
+i = 1
+while (i <= length(names(characs))) {
+  boxplot(bp$BPAvgSys ~ characs[,i], xlab = "BP Avg Systolic", ylab = names(characs)[i])
+  i = i + 1
+}
+```
+
+```{r}
+i = 1
+while (i <= length(names(characs))) {
+  boxplot(bp$BPAvgDias ~ characs[,i], xlab = "BP Avg Diastolic", ylab = names(characs)[i])
+  i = i + 1
+}
+```
+
+```{r}
+cor(bp, method = "pearson")[,"BPAvgSys"]
+```
+
+```{r}
+cor(bp_d, method = "pearson")[,"BPAvgDias"]
+```
+
+```{r}
+full_sys = lm(BPAvgSys ~ as.factor(Sex)+Age+as.factor(Race)+as.factor(Pregnant)+as.factor(InfantsInHousehold)+as.factor(ChildrenInHousehold)+as.factor(SeniorsInHousehold)+as.factor(Income)+as.factor(SaltUsed)+as.factor(SpecialDiet)+Calcium+Magnesium+Sodium+ Potassium + Alcohol + BMI + Waist + LabCalcium + LabCholesterol + LabTriglycerides + LabHDL + LabGlucose + DailyAlcoholicDrinks + as.factor(Prediabetic) + WeeklyMealsNotHomePrepared + as.factor(HighBP) + as.factor(Overweight) + as.factor(CongestiveHeartFailure)+as.factor(CoronaryHeartDisease)+as.factor(Stroke)+SedentaryMins + as.factor(SmokedCigarettes), data=bp_s)
+summary(full_sys)
+```
+
+```{r influencial, eval=TRUE}
+# compute influential points statistics
+influence.measures(full_sys)
+# print out only observations that may be influential 
+summary(influence.measures(full_sys))
+
+plot(rstudent(full_sys)~hatvalues(full_sys))
+abline(h =-3, col="red")  # add cutoff line
+abline(h = 3, col="red")  # add cutoff line
+
+LargeResiduals <- abs(rstudent(full_sys)) > 3
+bp_s_less_out <- bp_s[!LargeResiduals, ]
+nrow(bp_s)-nrow(bp_s_less_out)
+```
+#### _27 outliers removed_
+
+
+```{r}
+library(car)
+```
+```{r}
+vif(full_sys)
+```
+
+```{r}
+step(full_sys, direction = "backward", trace=FALSE)
+```
+
+```{r}
+m_s1 = lm(formula = BPAvgSys ~ as.factor(Sex) + Age + as.factor(Race) + 
+    as.factor(SeniorsInHousehold) + as.factor(Income) + as.factor(SaltUsed) + 
+    as.factor(SpecialDiet) + Magnesium + Alcohol + BMI + LabCholesterol + 
+    LabTriglycerides + LabHDL + as.factor(CongestiveHeartFailure) + 
+    as.factor(CoronaryHeartDisease), data = bp_s)
+summary(m_s1)
+```
+
+```{r}
+Base = lm(BPAvgSys ~ 1, data=bp_s)
+step(Base, scope=formula(full_sys),direction = "forward", trace=FALSE)
+```
+
+
+```{r influencial removed model, eval=TRUE}
+full_sys_new = lm(BPAvgSys ~ as.factor(Sex)+Age+as.factor(Race)+as.factor(Pregnant)+as.factor(InfantsInHousehold)+as.factor(ChildrenInHousehold)+as.factor(SeniorsInHousehold)+as.factor(Income)+as.factor(SaltUsed)+as.factor(SpecialDiet)+Calcium+Magnesium+Sodium+ Potassium + Alcohol + BMI + Waist + LabCalcium + LabCholesterol + LabTriglycerides + LabHDL + LabGlucose + DailyAlcoholicDrinks + as.factor(Prediabetic) + WeeklyMealsNotHomePrepared + as.factor(HighBP) + as.factor(Overweight) + as.factor(CongestiveHeartFailure)+as.factor(CoronaryHeartDisease)+as.factor(Stroke)+SedentaryMins + as.factor(SmokedCigarettes), data=bp_s_less_out)
+
+plot(rstudent(full_sys_new)~hatvalues(full_sys_new))
+abline(h =-3, col="red")  # add cutoff line
+abline(h = 3, col="red")  # add cutoff line
+```
+
+```{r summary full_sys_new, eval=TRUE}
+summary(full_sys_new)
+```
+
+```{r stepwise influencial removed , eval=TRUE}
+step(full_sys_new, direction = "backward", trace=FALSE)
+```
+
+```{r stepwise influencial removed model, eval=TRUE}
+m_s2_less_out = lm(formula = BPAvgSys ~ as.factor(Sex) + Age + as.factor(Race) + 
+    as.factor(SeniorsInHousehold) + as.factor(Income) + as.factor(SaltUsed) + 
+    as.factor(SpecialDiet) + Calcium + Sodium + Alcohol + BMI + 
+    LabCalcium + LabCholesterol + LabTriglycerides + LabHDL + 
+    LabGlucose + as.factor(CongestiveHeartFailure) + as.factor(CoronaryHeartDisease), 
+    data = bp_s_less_out)
+summary(m_s2_less_out)
+```
+```{r residual-assumptions, eval=TRUE}
+#residuals vs fitted values plot
+plot(fitted(full_sys), rstandard(full_sys))
+abline(a=0,b=0,col='red')
+
+#residuals vs independent variables
+plot(bp_s$Age,  rstandard(full_sys), main="Age vs residuals plot for M2")
+abline(a=0, b=0,col='red')
+plot(bp_s$Income,  rstandard(full_sys), main="Income vs residuals plot for M2")
+abline(a=0, b=0,col='red')
+plot(bp_s$BMI,  rstandard(full_sys), main="Wealth vs residuals plot for M2")
+abline(a=0, b=0,col='red')
+plot(bp_s$LabTriglycerides,  rstandard(full_sys), main="Triglycerides vs residuals plot for M2")
+abline(a=0, b=0,col='red')
+plot(bp_s$Alcohol,  rstandard(full_sys), main="Alcohol vs residuals plot for M2")
+abline(a=0, b=0,col='red')
+plot(bp_s$WeeklyMealsNotHomePrepared,  rstandard(full_sys), main="WeeklyMealsNotHomePrepared vs residuals plot for M2")
+abline(a=0, b=0,col='red')
+
+#normal probability plot of residuals
+qqnorm(rstandard(full_sys))
+qqline(rstandard(full_sys),col=2)
+```
+
+```{r squared model, eval=TRUE}
+
+Alcohol2 = bp_s$Alcohol^2
+LabTriglycerides2 = bp_s$LabTriglycerides^2
+WeeklyMealsNotHomePrepared2 = bp_s$WeeklyMealsNotHomePrepared^2
+
+# attach it to bp_s dataset
+bp_s=cbind(bp_s, Alcohol2,LabTriglycerides2, WeeklyMealsNotHomePrepared2)
+
+full_sys_transformed = lm(BPAvgSys ~ as.factor(Sex)+Age+as.factor(Race)+as.factor(Pregnant)+as.factor(InfantsInHousehold)+as.factor(ChildrenInHousehold)+as.factor(SeniorsInHousehold)+as.factor(Income)+as.factor(SaltUsed)+as.factor(SpecialDiet)+Calcium+Magnesium+Sodium+ Potassium + Alcohol + Alcohol2 + BMI + Waist + LabCalcium + LabCholesterol + LabTriglycerides+ LabTriglycerides2 + LabHDL + LabGlucose + DailyAlcoholicDrinks + as.factor(Prediabetic) + WeeklyMealsNotHomePrepared + WeeklyMealsNotHomePrepared2 + as.factor(HighBP) + as.factor(Overweight) + as.factor(CongestiveHeartFailure)+as.factor(CoronaryHeartDisease)+as.factor(Stroke)+SedentaryMins + as.factor(SmokedCigarettes), data=bp_s)
+summary(full_sys_transformed)
+```
+####_ The adjusted R-squared improves from 0.3076 after transformation to 0.31_
+
+```{r residual-assumptions after transform, eval=TRUE}
+#residuals vs fitted values plot
+plot(fitted(full_sys_transformed), rstandard(full_sys_transformed))
+abline(a=0,b=0,col='red')
+
+plot(bp_s$LabTriglycerides2,  rstandard(full_sys_transformed), main="Triglycerides vs residuals plot for M2")
+abline(a=0, b=0,col='red')
+plot(bp_s$Alcohol2,  rstandard(full_sys_transformed), main="Alcohol vs residuals plot for M2")
+abline(a=0, b=0,col='red')
+plot(bp_s$WeeklyMealsNotHomePrepared2,  rstandard(full_sys_transformed), main="WeeklyMealsNotHomePrepared vs residuals plot for M2")
+abline(a=0, b=0,col='red')
+
+#normal probability plot of residuals
+qqnorm(rstandard(full_sys_transformed))
+qqline(rstandard(full_sys_transformed),col=2)
+```
+```{r stepwise transformed , eval=TRUE}
+step(full_sys_transformed, direction = "backward", trace=FALSE)
+```
+
+```{r stepwise squared model, eval=TRUE}
+m_s3_trans = lm(formula = BPAvgSys ~ as.factor(Sex) + Age + as.factor(Race) + 
+    as.factor(SeniorsInHousehold) + as.factor(Income) + as.factor(SaltUsed) + 
+    as.factor(SpecialDiet) + Magnesium + Alcohol + Alcohol2 + 
+    BMI + LabCholesterol + LabTriglycerides + LabTriglycerides2 + 
+    LabHDL + as.factor(CongestiveHeartFailure) + as.factor(CoronaryHeartDisease), 
+    data = bp_s)
+summary(m_s3_trans)
+```
+
+```{r transformed and less residual, eval=TRUE}
+Alcohol2 = bp_s_less_out$Alcohol^2
+LabTriglycerides2 = bp_s_less_out$LabTriglycerides^2
+WeeklyMealsNotHomePrepared2 = bp_s_less_out$WeeklyMealsNotHomePrepared^2
+
+# attach it to bp_s dataset
+bp_s_less_out=cbind(bp_s_less_out, Alcohol2,LabTriglycerides2, WeeklyMealsNotHomePrepared2)
+
+full_sys_tran_less_out = lm(BPAvgSys ~ as.factor(Sex)+Age+as.factor(Race)+as.factor(Pregnant)+as.factor(InfantsInHousehold)+as.factor(ChildrenInHousehold)+as.factor(SeniorsInHousehold)+as.factor(Income)+as.factor(SaltUsed)+as.factor(SpecialDiet)+Calcium+Magnesium+Sodium+ Potassium + Alcohol + Alcohol2 + BMI + Waist + LabCalcium + LabCholesterol + LabTriglycerides+ LabTriglycerides2 + LabHDL + LabGlucose + DailyAlcoholicDrinks + as.factor(Prediabetic) + WeeklyMealsNotHomePrepared + WeeklyMealsNotHomePrepared2 + as.factor(HighBP) + as.factor(Overweight) + as.factor(CongestiveHeartFailure)+as.factor(CoronaryHeartDisease)+as.factor(Stroke)+SedentaryMins + as.factor(SmokedCigarettes), data=bp_s_less_out)
+summary(full_sys_tran_less_out)
+```
+
+```{r stepwise transformed and oulier removed, eval=TRUE}
+step(full_sys_tran_less_out, direction = "backward", trace=FALSE)
+```
+```{r stepwise transformed and oulier removed model, eval=TRUE}
+m_s4_trans_out_comb = lm(formula = BPAvgSys ~ as.factor(Sex) + Age + as.factor(Race) + 
+    as.factor(SeniorsInHousehold) + as.factor(Income) + as.factor(SaltUsed) + 
+    Calcium + Sodium + Alcohol + Alcohol2 + BMI + LabCalcium + 
+    LabTriglycerides + LabTriglycerides2 + LabHDL + LabGlucose + 
+    as.factor(CongestiveHeartFailure) + as.factor(CoronaryHeartDisease), 
+    data = bp_s_less_out)
+summary(m_s4_trans_out_comb)
+```
+
+####_The adjusted R-squared is highest after transformation and influential large residual removal._
+
+```{r residual-assumptions after transform and large residual removal, eval=TRUE}
+#residuals vs fitted values plot
+plot(fitted(m_s4_trans_out_comb), rstandard(m_s4_trans_out_comb))
+abline(a=0,b=0,col='red')
+
+plot(bp_s_less_out$LabTriglycerides2,  rstandard(m_s4_trans_out_comb), main="Triglycerides vs residuals plot for M2")
+abline(a=0, b=0,col='red')
+plot(bp_s_less_out$BMI,  rstandard(m_s4_trans_out_comb), main="BMI vs residuals plot for M2")
+abline(a=0, b=0,col='red')
+plot(bp_s_less_out$Alcohol2,  rstandard(m_s4_trans_out_comb), main="Alcohol vs residuals plot for M2")
+abline(a=0, b=0,col='red')
+
+#normal probability plot of residuals
+qqnorm(rstandard(full_sys_transformed))
+qqline(rstandard(full_sys_transformed),col=2)
+```
