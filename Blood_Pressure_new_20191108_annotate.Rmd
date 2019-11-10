@@ -111,6 +111,15 @@ full_sys = lm(BPAvgSys ~ as.factor(Sex)+Age+as.factor(Race)+as.factor(Pregnant)+
 summary(full_sys)
 ```
 
+### VIF computed to determine if there is any multi-collinearity in systolic model.  Weight removed because VIF > 10 due to multicollinearity with Waist and BMI.
+```{r}
+library(car)
+```
+```{r}
+vif(full_sys)
+```
+
+
 ### Computation of influential points and studentized vs hat value plot for systolic model. 27 outliers were removed.
 ```{r influencial, eval=TRUE}
 # compute influential points statistics
@@ -127,35 +136,6 @@ bp_s_less_out <- bp_s[!LargeResiduals, ]
 nrow(bp_s)-nrow(bp_s_less_out)
 ```
 
-### VIF computed to determine if there is any multi-collinearity in systolic model
-```{r}
-library(car)
-```
-```{r}
-vif(full_sys)
-```
-
-### Backwards stepwise regression used to determine optimal linear fit for systolic model
-```{r}
-step(full_sys, direction = "backward", trace=FALSE)
-```
-
-### Linear model based on above stepwise fit for systolic model
-```{r}
-m_s1 = lm(formula = BPAvgSys ~ as.factor(Sex) + Age + as.factor(Race) + 
-    as.factor(SeniorsInHousehold) + as.factor(Income) + as.factor(SaltUsed) + 
-    as.factor(SpecialDiet) + Magnesium + Alcohol + BMI + LabCholesterol + 
-    LabTriglycerides + LabHDL + as.factor(CongestiveHeartFailure) + 
-    as.factor(CoronaryHeartDisease), data = bp_s)
-summary(m_s1)
-```
-
-### Not sure what this is doing
-```{r}
-Base = lm(BPAvgSys ~ 1, data=bp_s)
-step(Base, scope=formula(full_sys),direction = "forward", trace=FALSE)
-```
-
 ### New systolic model with influential points removed
 ```{r influencial removed model, eval=TRUE}
 full_sys_new = lm(BPAvgSys ~ as.factor(Sex)+Age+as.factor(Race)+as.factor(Pregnant)+as.factor(InfantsInHousehold)+as.factor(ChildrenInHousehold)+as.factor(SeniorsInHousehold)+as.factor(Income)+as.factor(SaltUsed)+as.factor(SpecialDiet)+Calcium+Magnesium+Sodium+ Potassium + Alcohol + BMI + Waist + LabCalcium + LabCholesterol + LabTriglycerides + LabHDL + LabGlucose + DailyAlcoholicDrinks + as.factor(Prediabetic) + WeeklyMealsNotHomePrepared + as.factor(HighBP) + as.factor(Overweight) + as.factor(CongestiveHeartFailure)+as.factor(CoronaryHeartDisease)+as.factor(Stroke)+SedentaryMins + as.factor(SmokedCigarettes), data=bp_s_less_out)
@@ -170,20 +150,27 @@ abline(h = 3, col="red")  # add cutoff line
 summary(full_sys_new)
 ```
 
-### Stepwise regression reran on new systolic model
+### Backward stepwise regression reran on new systolic model
 ```{r stepwise influencial removed , eval=TRUE}
 step(full_sys_new, direction = "backward", trace=FALSE)
 ```
 
-### Stepwise model for new systolic model
+### Forward stepwise regression
+```{r}
+Base = lm(BPAvgSys ~ 1, data=bp_s)
+step(Base, scope=formula(full_sys),direction = "forward", trace=FALSE)
+```
+
+
+### Stepwise model for new systolic model based on results both from forward and backward stepwise regression
 ```{r stepwise influencial removed model, eval=TRUE}
-m_s2_less_out = lm(formula = BPAvgSys ~ as.factor(Sex) + Age + as.factor(Race) + 
+sys_less_out = lm(formula = BPAvgSys ~ as.factor(Sex) + Age + as.factor(Race) + 
     as.factor(SeniorsInHousehold) + as.factor(Income) + as.factor(SaltUsed) + 
     as.factor(SpecialDiet) + Calcium + Sodium + Alcohol + BMI + 
     LabCalcium + LabCholesterol + LabTriglycerides + LabHDL + 
     LabGlucose + as.factor(CongestiveHeartFailure) + as.factor(CoronaryHeartDisease), 
     data = bp_s_less_out)
-summary(m_s2_less_out)
+summary(sys_less_out)
 ```
 
 ### Residual and Q-Q Plots for new systolic model
@@ -253,13 +240,13 @@ step(full_sys_transformed, direction = "backward", trace=FALSE)
 
 ### Stepwise regression model from above output
 ```{r stepwise squared model, eval=TRUE}
-m_s3_trans = lm(formula = BPAvgSys ~ as.factor(Sex) + Age + as.factor(Race) + 
+sys_trans = lm(formula = BPAvgSys ~ as.factor(Sex) + Age + as.factor(Race) + 
     as.factor(SeniorsInHousehold) + as.factor(Income) + as.factor(SaltUsed) + 
     as.factor(SpecialDiet) + Magnesium + Alcohol + Alcohol2 + 
     BMI + LabCholesterol + LabTriglycerides + LabTriglycerides2 + 
     LabHDL + as.factor(CongestiveHeartFailure) + as.factor(CoronaryHeartDisease), 
     data = bp_s)
-summary(m_s3_trans)
+summary(sys_trans)
 ```
 
 ### Full system model created again, but this time without the outliers identified earlier
@@ -280,33 +267,88 @@ summary(full_sys_tran_less_out)
 ```{r stepwise transformed and oulier removed, eval=TRUE}
 step(full_sys_tran_less_out, direction = "backward", trace=FALSE)
 ```
+
+```{r}
+Base_less_out = lm(BPAvgSys ~ 1, data=bp_s_less_out)
+step(Base_less_out, scope=formula(full_sys_tran_less_out),direction = "forward", trace=FALSE)
+```
+
 ```{r stepwise transformed and oulier removed model, eval=TRUE}
-m_s4_trans_out_comb = lm(formula = BPAvgSys ~ as.factor(Sex) + Age + as.factor(Race) + 
+sys_trans_out_comb = lm(formula = BPAvgSys ~ as.factor(Sex) + Age + as.factor(Race) + 
     as.factor(SeniorsInHousehold) + as.factor(Income) + as.factor(SaltUsed) + 
     Calcium + Sodium + Alcohol + Alcohol2 + BMI + LabCalcium + 
     LabTriglycerides + LabTriglycerides2 + LabHDL + LabGlucose + 
     as.factor(CongestiveHeartFailure) + as.factor(CoronaryHeartDisease), 
     data = bp_s_less_out)
-summary(m_s4_trans_out_comb)
+summary(sys_trans_out_comb)
 ```
 
 #### The adjusted R-squared is highest after transformation and influential large residual removal compared to transformation model with outliers included.
+
+### Create dummy variables for significant variable factors
+```{r}
+d_Race_4=(bp_s_less_out$Race == 4)*1
+d_Race_5=(bp_s_less_out$Race == 5)*1
+d_SeniorsinHousehold_1=(bp_s_less_out$SeniorsInHousehold == 1)*1
+d_SeniorsinHousehold_2=(bp_s_less_out$SeniorsInHousehold == 2)*1
+d_Sex_2=(bp_s_less_out$Sex == 2)*1
+d_SaltUsed_2=(bp_s_less_out$SaltUsed == 2)*1
+d_SaltUsed_3=(bp_s_less_out$SaltUsed == 3)*1
+d_SaltUsed_4=(bp_s_less_out$SaltUsed == 4)*1
+d_CongHeartFail_2=(bp_s_less_out$CongestiveHeartFailure == 2)*1
+d_CorHeartDisease_2=(bp_s_less_out$CoronaryHeartDisease == 2)*1
+```
+
+### Remove insignificant variables
+```{r}
+sys_trans_out_comb2 = lm(formula = BPAvgSys ~ as.factor(Sex) + Age + d_Race_4 + d_Race_5 + 
+    d_SeniorsinHousehold_1 + d_SeniorsinHousehold_2 + as.factor(SaltUsed) + 
+    Alcohol + Alcohol2 + BMI +
+    LabTriglycerides + LabTriglycerides2 + LabHDL + 
+    as.factor(CongestiveHeartFailure) + as.factor(CoronaryHeartDisease), 
+    data = bp_s_less_out)
+summary(sys_trans_out_comb2)
+```
 
 ### Residuals and Q-Q plots reran on the latest model
 
 ```{r residual-assumptions after transform and large residual removal, eval=TRUE}
 #residuals vs fitted values plot
-plot(fitted(m_s4_trans_out_comb), rstandard(m_s4_trans_out_comb))
+plot(fitted(sys_trans_out_comb2), rstandard(sys_trans_out_comb2))
 abline(a=0,b=0,col='red')
 
-plot(bp_s_less_out$LabTriglycerides2,  rstandard(m_s4_trans_out_comb), main="Triglycerides vs residuals plot for M2")
+plot(bp_s_less_out$LabTriglycerides2,  rstandard(sys_trans_out_comb2), main="Triglycerides vs residuals plot for M2")
 abline(a=0, b=0,col='red')
-plot(bp_s_less_out$BMI,  rstandard(m_s4_trans_out_comb), main="BMI vs residuals plot for M2")
+plot(bp_s_less_out$BMI,  rstandard(sys_trans_out_comb2), main="BMI vs residuals plot for M2")
 abline(a=0, b=0,col='red')
-plot(bp_s_less_out$Alcohol2,  rstandard(m_s4_trans_out_comb), main="Alcohol vs residuals plot for M2")
+plot(bp_s_less_out$Alcohol2,  rstandard(sys_trans_out_comb2), main="Alcohol vs residuals plot for M2")
 abline(a=0, b=0,col='red')
 
 #normal probability plot of residuals
-qqnorm(rstandard(full_sys_transformed))
-qqline(rstandard(full_sys_transformed),col=2)
+qqnorm(rstandard(sys_trans_out_comb2))
+qqline(rstandard(sys_trans_out_comb2),col=2)
 ```
+
+### Check against interactions with Sex since boxplot was the only one that showed noticeable differences in medians and IQRs. Perform backward stepwise regression for possible model.
+```{r}
+sys_trans_out_int_full = lm(formula = BPAvgSys ~ as.factor(Sex)*( Age + as.factor(Race) + 
+    as.factor(SeniorsInHousehold) + as.factor(Income) + as.factor(SaltUsed) + 
+    Calcium + Sodium + Alcohol + Alcohol2 + BMI + LabCalcium + 
+    LabTriglycerides + LabTriglycerides2 + LabHDL + LabGlucose + 
+    as.factor(CongestiveHeartFailure) + as.factor(CoronaryHeartDisease)), 
+    data = bp_s_less_out)
+step(sys_trans_out_int_full, direction="backward", trace=FALSE)
+```
+###   Not much improvement in model when check for possible interactions and remove insignificant values.
+```{r}
+sys_trans_out_int1 = lm(formula = BPAvgSys ~ Age + d_Race_4 + d_Race_5 + 
+    d_SeniorsinHousehold_1 + d_SeniorsinHousehold_2 + as.factor(SaltUsed) + 
+    Alcohol + Alcohol2 + BMI + 
+    LabTriglycerides + LabTriglycerides2 + LabHDL + 
+    as.factor(CongestiveHeartFailure) + as.factor(CoronaryHeartDisease) + 
+    as.factor(Sex):LabHDL, data = bp_s_less_out)
+summary(sys_trans_out_int1)
+```
+
+### Continue onto cross-validation for sys_trans_out_comb2 to choose simpler model.
+
