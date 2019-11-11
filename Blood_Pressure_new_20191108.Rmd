@@ -35,6 +35,15 @@ bp = select(bp,-c(Diabetic))
 Drop Diabetic variable because only 1 value after filters.
 
 ```{r}
+# Create training and testing set
+# split samples (75% for training and 25% for testing)
+select.bp <- sample(1:nrow(bp), 0.75*nrow(bp))
+bp <- bp[select.bp,]  #Selecting 75% of the data for training purpose
+bp_test <- bp[-select.bp,]  #Selecting 25% (remaining) of the data for testing purpose
+```
+
+
+```{r}
 bp_d = subset(bp, select= -c(BPAvgSys))
 bp_s = subset(bp, select= -c(BPAvgDias))
 ```
