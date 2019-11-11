@@ -282,3 +282,39 @@ abline(a=0, b=0,col='red')
 qqnorm(rstandard(full_sys_transformed))
 qqline(rstandard(full_sys_transformed),col=2)
 ```
+
+```{r}
+Alcohol2 = bp_test$Alcohol^2
+LabTriglycerides2 = bp_test$LabTriglycerides^2
+
+# attach it to bp_s dataset
+bp_test=cbind(bp_test, Alcohol2,LabTriglycerides2)
+y_pred <- predict.glm(m_s4_trans_out_comb, bp_test)
+y_obs<-bp_test[,"BPAvgSys"]
+```
+
+```{r}
+# Compute RMSE of prediction errors 
+rmse_m1 <- sqrt((y_obs - y_pred)%*%(y_obs - y_pred)/nrow(bp_test)) 
+rmse_m1
+# Compute mean absolute error 
+mae_m1<-mean(abs(y_obs - y_pred)) 
+mae_m1
+# Compute mean percentage absolute error 
+mape_m1<-mean(abs((y_obs - y_pred)/y_obs))*100 
+mape_m1
+```
+
+```{r}
+# compute cross-validated R^2_pred 
+r2_pred = cor(cbind(y_obs,y_pred))**2 
+r2_train = summary(m_s4_trans_out_comb)$r.squared 
+diffr2_m1=abs(r2_train-r2_pred) 
+#print difference of cross-validate R2 and R2 
+diffr2_m1[1,2]
+
+```
+Model shows similar result on a test data.
+
+
+
