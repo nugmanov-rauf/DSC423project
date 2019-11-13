@@ -1,6 +1,9 @@
 ---
 title: "R Notebook"
-output: html_notebook
+date: "11/12/2019"
+output:
+  github_document:
+    html_preview: true
 ---
 
 ```{r setup, include=FALSE}
@@ -41,6 +44,14 @@ colnames(bp)[1:34] = c("Sex","Age","Race","Pregnant", "InfantsInHousehold", "Chi
 ```{r}
 bp = select(bp,-c(Diabetic))
 ```
+### Splitin dataset: 75% training, 25 testing
+```{r}
+set.seed(6573)
+select.bp <- sample(1:nrow(bp), 0.75*nrow(bp))
+bp <- bp[select.bp,]
+bp_test <- bp[-select.bp,]
+```
+
 
 
 ### Breaking data down into two sets: one for diastolic and one systolic
@@ -149,9 +160,11 @@ abline(h = 3, col="red")  # add cutoff line
 ```{r summary full_sys_new, eval=TRUE}
 summary(full_sys_new)
 ```
-
-### Backward stepwise regression reran on new systolic model
 ```{r stepwise influencial removed , eval=TRUE}
+step(full_sys_new, direction = "both", trace=FALSE)
+```
+### Backward stepwise regression reran on new systolic model
+```{r stepwise influencial removed 1 , eval=TRUE}
 step(full_sys_new, direction = "backward", trace=FALSE)
 ```
 
@@ -212,7 +225,7 @@ full_sys_transformed = lm(BPAvgSys ~ as.factor(Sex)+Age+as.factor(Race)+as.facto
 summary(full_sys_transformed)
 ```
 
-#### The adjusted R-squared improves from 0.3076 after transformation to 0.3103
+#### The adjusted R-squared improves decresed//from 0.3076 after transformation to 0.3103
 
 ### Residual and Q-Q Plots recreated after transformations
 
@@ -350,5 +363,65 @@ sys_trans_out_int1 = lm(formula = BPAvgSys ~ Age + d_Race_4 + d_Race_5 +
 summary(sys_trans_out_int1)
 ```
 
-### Continue onto cross-validation for sys_trans_out_comb2 to choose simpler model.
+### Cross-validation for full_sys_tran_less_out and sys_trans_out_int1 to choose simpler model.
+```{r}
+Alcohol2 = bp_test$Alcohol^2
+LabTriglycerides2 = bp_test$LabTriglycerides^2
+WeeklyMealsNotHomePrepared2 = bp_test$WeeklyMealsNotHomePrepared^2
 
+d_Race_4=(bp_test$Race == 4)*1
+d_Race_5=(bp_test$Race == 5)*1
+d_SeniorsinHousehold_1=(bp_test$SeniorsInHousehold == 1)*1
+d_SeniorsinHousehold_2=(bp_test$SeniorsInHousehold == 2)*1
+
+bp_test=cbind(bp_test, Alcohol2,LabTriglycerides2,WeeklyMealsNotHomePrepared2,d_Race_4,d_Race_5,d_SeniorsinHousehold_1,d_SeniorsinHousehold_2)
+y_pred <- predict.glm(full_sys_tran_less_out, bp_test)
+y_pred2 <- predict.glm(sys_trans_out_int1, bp_test)
+y_obs<-bp_test[,"BPAvgSys"]
+```
+### Cross-validation statistics
+```{r}
+# Compute RMSE of prediction errors 
+rmse_m1 <- sqrt((y_obs - y_pred)%*%(y_obs - y_pred)/nrow(bp_test)) 
+rmse_m1
+# Compute mean absolute error 
+mae_m1<-mean(abs(y_obs - y_pred)) 
+mae_m1
+# Compute mean percentage absolute error 
+mape_m1<-mean(abs((y_obs - y_pred)/y_obs))*100 
+mape_m1
+```
+
+```{r}
+# Compute RMSE of prediction errors 
+rmse_m2 <- sqrt((y_obs - y_pred2)%*%(y_obs - y_pred2)/nrow(bp_test)) 
+rmse_m2
+# Compute mean absolute error 
+mae_m2<-mean(abs(y_obs - y_pred2)) 
+mae_m2
+# Compute mean percentage absolute error 
+mape_m2<-mean(abs((y_obs - y_pred2)/y_obs))*100 
+mape_m2
+```
+
+
+
+```{r}
+# compute cross-validated R^2_pred 
+r2_pred = cor(cbind(y_obs,y_pred))**2 
+r2_train = summary(full_sys_tran_less_out)$r.squared 
+diffr2_m1=abs(r2_train-r2_pred) 
+#print difference of cross-validate R2 and R2 
+diffr2_m1[1,2]
+
+```
+
+```{r}
+# compute cross-validated R^2_pred 
+r2_pred2 = cor(cbind(y_obs,y_pred2))**2 
+r2_train2 = summary(sys_trans_out_int1)$r.squared 
+diffr2_m2=abs(r2_train2-r2_pred2) 
+#print difference of cross-validate R2 and R2 
+diffr2_m2[1,2]
+
+```
