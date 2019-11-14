@@ -48,7 +48,7 @@ bp = select(bp,-c(Diabetic))
 ```{r}
 set.seed(6573)
 select.bp <- sample(1:nrow(bp), 0.75*nrow(bp))
-bp <- bp[select.bp,]
+#bp <- bp[select.bp,] #Please enable for the cross-validation
 bp_test <- bp[-select.bp,]
 ```
 
@@ -376,7 +376,7 @@ d_SeniorsinHousehold_2=(bp_test$SeniorsInHousehold == 2)*1
 
 bp_test=cbind(bp_test, Alcohol2,LabTriglycerides2,WeeklyMealsNotHomePrepared2,d_Race_4,d_Race_5,d_SeniorsinHousehold_1,d_SeniorsinHousehold_2)
 y_pred <- predict.glm(full_sys_tran_less_out, bp_test)
-y_pred2 <- predict.glm(sys_trans_out_int1, bp_test)
+y_pred2 <- predict.glm(sys_less_out, bp_test)
 y_obs<-bp_test[,"BPAvgSys"]
 ```
 ### Cross-validation statistics
@@ -419,7 +419,7 @@ diffr2_m1[1,2]
 ```{r}
 # compute cross-validated R^2_pred 
 r2_pred2 = cor(cbind(y_obs,y_pred2))**2 
-r2_train2 = summary(sys_trans_out_int1)$r.squared 
+r2_train2 = summary(sys_less_out)$r.squared 
 diffr2_m2=abs(r2_train2-r2_pred2) 
 #print difference of cross-validate R2 and R2 
 diffr2_m2[1,2]
